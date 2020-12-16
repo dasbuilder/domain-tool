@@ -1,18 +1,16 @@
 #!/usr/local/bin python3
 
-# Version 1.0
-
-import sys, os
-import subprocess
-import requests
 import argparse
-import re
 from collections import defaultdict
+import os
+import re
+import requests
+import subprocess
+import sys
 
 argv = sys.argv
 
 # These are here for reasons...
-check_output = subprocess.check_output
 PIPE = subprocess.PIPE
 run = subprocess.run
 Popen = subprocess.Popen
@@ -22,6 +20,8 @@ class Digger:
 
     '''
     Digger class
+    domain: str
+    _dig_prefix: list, beginning of dig command, later passed to subprocess
     '''
 
     def __init__(self, domain):
@@ -145,37 +145,34 @@ def whois_formatter(whois):
 
 def cdn_check(args):
 
-    # Takes in the Digger class for domain name
-    edge = False
+    site_name = os.environ.get('SITE')
+    server = os.environ.get('CID')
+    network_type = os.environ.get('NETWORK_TYPE')
 
+    # Takes in the Digger class for domain name
     headers = {'user-agent': 'curl/7.54.0'}
     cdn_url = os.environ.get('CDNCHECK')
     # Uses argparse and passes that to Dig's _domain
     domain = args._domain
     base_url = f'http://{domain}/{cdn_url}'
-    site_name = os.environ.get('SITE')
-    server = os.environ.get('CID')
-    network_type = os.environ.get('NETWORK_TYPE')
 
     cdn_req = requests.get(base_url, headers=headers)
     resp_headers = cdn_req.headers
 
-    if site_name not in cdn_req.headers:
+    if site_name not in resp_headers:
         err = requests.exceptions.HTTPError("404 - Not Found",
                                             cdn_req.status_code)
         return f"{err.strerror}\t{err.errno}\n"
     else:
-        if not network_type in cdn_req.headers:
-            edge = False
-            _output = [cdn_req.headers[site_name],
-                   cdn_req.headers[server]]
+        if network_type not in resp_headers:
+            _output = [resp_headers[site_name],
+                       resp_headers[server]]
             return f"Site: {_output[0]}\nServer: {_output[1]}\n"
         else:
-            edge = True
-            _output = [cdn_req.headers[site_name],
-                    cdn_req.headers[server],
-                    cdn_req.headers[network_type]]
-            return f'Site: {_output[0]}\nServer: {_output[1]}\nEdge: {_output[2]}\n'
+            _output = [resp_headers[site_name],
+                       resp_headers[server], resp_headers[network_type]]
+            return f"Site: {_output[0]}\nServer: {_output[1]}\nEdge: \
+{_output[2]}\n"
 
 
 def is_protocol(domain):
@@ -235,6 +232,7 @@ def detailed_records(dig, record_type):
 
 # SSL section
 # Gets the SSL information via subprocess
+# Looks for the DNS, Start/Expiry dates and the serial
 def ssl(domain):
 
     open_ssl = Popen(['openssl', 's_client', '-verify', '5', '-connect',
@@ -272,36 +270,36 @@ def ssl_details(ssl_text, domain):
     print('-- SSL Domain --')
     print(domain)
     print('-- SSL Began --')
-    print(ssl_text[2])
-    print('-- SSL Expiry --')
     print(ssl_text[1])
+    print('-- SSL Expiry --')
+    print(ssl_text[2])
     print('-- SSL Cert Serial Number --')
     print(ssl_text[3])
 
 
 def usage():
     print('''
-                    ========== DNS Check Tool ==========
+                    ========== Domain Info ==========
                             by Spencer Anderson
 
             Retreives DNS, SSL and WHOIS information for a domain name.
-            Without any args, dnscheck will return any A, CNAME, nameservers as well as, 
-            which site and server the site is hosted on.
+            Without any args, domain-info.py will return any A, CNAME, nameservers as well as,
+            which site and server the site is hosted on (where applicable)
 
 
-            Accepts domains and subdomains with protocol and trailing slash. 
+            Accepts domains and subdomains with protocol and trailing slash.
 
-Usage: dnscheck.py [-h] [--help] | domain [details] [cdn] [ssl] 
-    dnscheck.py https://domain.com/ 
-    dnscheck.py domain.com details
-    dnscheck.py domain.com ssl
+Usage: domain-info.py.py [-h] [--help] | domain [details] [cdn] [ssl] 
+    domain-info.py.py https://domain.com/ 
+    domain-info.py.py domain.com details
+    domain-info.py.py domain.com ssl
 ''')
 
 
 def arg_parser():
     # Top level parser
-    description_text = 'Easily checks DNS records, including CDN for server and site name.'
-    parser = argparse.ArgumentParser(prog='DNSCheck',
+    description_text = 'Check a domain for DNS, WHOIS, and SSL information.'
+    parser = argparse.ArgumentParser(prog='domain-tool',
                                      description=description_text,
                                      add_help=False)
     parser.add_argument('domain', type=is_protocol,
@@ -324,11 +322,9 @@ def main():
     # Initializing our class
     dig = Digger(args.domain)
     record_type = ('A', 'AAAA', 'CNAME', 'MX', 'NS', 'SOA', 'TXT')
-    
     # Get the SSL information
     ssl_info = ssl(args.domain)
     ssl_text_info = ssl_text(ssl_info)
-    domain = args.domain
 
     # whois = whois_formatter(whois_output)
     # Hacky way to get around using argparse for a menu.
