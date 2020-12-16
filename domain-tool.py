@@ -1,6 +1,6 @@
 #!/usr/local/bin python3
 
-# Version 2.0
+# Version 1.0
 
 import sys, os
 import subprocess
@@ -146,8 +146,7 @@ def whois_formatter(whois):
 def cdn_check(args):
 
     # Takes in the Digger class for domain name
-
-    # Takes in the Digger class for domain name
+    edge = False
 
     headers = {'user-agent': 'curl/7.54.0'}
     cdn_url = os.environ.get('CDNCHECK')
@@ -156,16 +155,27 @@ def cdn_check(args):
     base_url = f'http://{domain}/{cdn_url}'
     site_name = os.environ.get('SITE')
     server = os.environ.get('CID')
+    network_type = os.environ.get('NETWORK_TYPE')
+
     cdn_req = requests.get(base_url, headers=headers)
+    resp_headers = cdn_req.headers
 
     if site_name not in cdn_req.headers:
         err = requests.exceptions.HTTPError("404 - Not Found",
                                             cdn_req.status_code)
         return f"{err.strerror}\t{err.errno}\n"
     else:
-        _output = [cdn_req.headers[site_name],
+        if not network_type in cdn_req.headers:
+            edge = False
+            _output = [cdn_req.headers[site_name],
                    cdn_req.headers[server]]
-        return f"Site: {_output[0]}\nServer: {_output[1]}\n"
+            return f"Site: {_output[0]}\nServer: {_output[1]}\n"
+        else:
+            edge = True
+            _output = [cdn_req.headers[site_name],
+                    cdn_req.headers[server],
+                    cdn_req.headers[network_type]]
+            return f'Site: {_output[0]}\nServer: {_output[1]}\nEdge: {_output[2]}\n'
 
 
 def is_protocol(domain):
@@ -184,7 +194,7 @@ def default_records(dig, record_type):
     print(dig.stdout(record_type[0]))
 
     print("-- HostCheck --")
-    cdn_check(dig)
+    print(cdn_check(dig))
 
     print('-- CNAME record(s) --')
     print(dig.stdout(record_type[2]))
@@ -314,10 +324,10 @@ def main():
     # Initializing our class
     dig = Digger(args.domain)
     record_type = ('A', 'AAAA', 'CNAME', 'MX', 'NS', 'SOA', 'TXT')
+    
     # Get the SSL information
     ssl_info = ssl(args.domain)
     ssl_text_info = ssl_text(ssl_info)
-    # ssl_detail_info = ssl_details(ssl_text_info, args.domain)
     domain = args.domain
 
     # whois = whois_formatter(whois_output)
@@ -336,7 +346,7 @@ def main():
             print('-- A record(s) --')
             print(dig.stdout(record_type[0]))
             print('-- CNAME record(s) --')
-            cdn_check(dig)
+            print(cdn_check(dig))
 
         elif 'ssl' in argv[2]:
             ssl_details(ssl_text_info, args.domain)
