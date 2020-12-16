@@ -42,3 +42,13 @@ Checks DNS and SSL information via command line
 ## [0.9] - 2020-12-01
 ### Updated
 - Removed specific references, these are now stored as environment variables
+
+## [1.0] - 2020-12-15
+### Updated
+- Fixed output not happening for Hostcheck records
+- Removed duplicate notes
+
+## [1.1] - 2020-12-16
+### Updated
+- Name of program
+- Formatting

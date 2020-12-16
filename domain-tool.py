@@ -259,7 +259,7 @@ def ssl_text(ssl_info):
 
 
 def ssl_debug(domain):
-    return f'''Run the following command: 
+    return f'''Run the following command:\n
     openssl s_client -verify 5 -connect {domain}:443 -servername {domain} </dev/null 2>/dev/null | 
     openssl x509 -noout -text | egrep 'DNS:.*|Not After.*|Not Before.*|Serial Number\W\\n.*'
     '''
@@ -283,16 +283,16 @@ def usage():
                             by Spencer Anderson
 
             Retreives DNS, SSL and WHOIS information for a domain name.
-            Without any args, domain-info.py will return any A, CNAME, nameservers as well as,
+            Without any args, domain-tool.py will return any A, CNAME, nameservers as well as,
             which site and server the site is hosted on (where applicable)
 
 
             Accepts domains and subdomains with protocol and trailing slash.
 
-Usage: domain-info.py.py [-h] [--help] | domain [details] [cdn] [ssl] 
-    domain-info.py.py https://domain.com/ 
-    domain-info.py.py domain.com details
-    domain-info.py.py domain.com ssl
+Usage: domain-tool.py domain [-h] [--help] | domain [details] [cdn] [ssl] 
+    domain-tool.py https://domain.com/ 
+    domain-tool.py domain.com details
+    domain-tool.py domain.com ssl
 ''')
 
 
@@ -326,7 +326,6 @@ def main():
     ssl_info = ssl(args.domain)
     ssl_text_info = ssl_text(ssl_info)
 
-    # whois = whois_formatter(whois_output)
     # Hacky way to get around using argparse for a menu.
     if len(argv) == 2:
         print(f'DNS Report for {args.domain}\n')
