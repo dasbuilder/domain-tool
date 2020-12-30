@@ -3,7 +3,7 @@ Checks DNS and SSL information via command line
 
 * Prints out SSL information for a site
 * Needs the following environment variables set
-    - 'CDNCHECK' (a specific URL to check for uptime)
+    - 'CDNCHECK' (a specific URL to check for uptime, e.g. domain.com/uptimecheck). This should return a specific ID (which I call site) and an IP address or hostname, depending on your settings. 
     - 'SITE' (A header used to determine a site's name)
     - 'CID' (A header used to determin a site's server)
 
